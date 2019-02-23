@@ -6,6 +6,7 @@ int left_hand_pin=10;
 int right_hand_pin=9;
 int32_t frequency = 50; //frequency (in Hz)
 int angle_pin = A3; // 读取的角度429-523 平衡473
+
 struct pid   //PID结构体的定义
 {
   float SetAngle;
@@ -31,7 +32,18 @@ struct pid   //PID结构体的定义
   PID.Kd=0.2;       //自己设定
   printf("PID_init end \n");
  }
-
+struct PID_receive
+{
+  float Kp;
+  float Ki;
+  float Kd;
+ }PID_Receive;
+void PID_receive_init()
+ {
+  PID_Receive.Kp=0;
+  PID_Receive.Ki=0;
+  PID_Receive.Kd=0;
+  }
 float PID_realize()//PID算法实现
 {
   PID.SetAngle=473;           //设定值
@@ -42,6 +54,7 @@ float PID_realize()//PID算法实现
   PID.voltage_change=PID.voltage_change*1.0;    //算出实际值
   return PID.voltage_change;         //返回
 }
+
 void motor_correct()
 {
     percentage=6553;
@@ -68,22 +81,38 @@ void setup() {
     pinMode(right_hand_pin, OUTPUT);   
   }
   PID_init();
+  PID_receive_init();
   motor_correct();
 }
 
 void loop() 
 {
   // put your main code here, to run repeatedly:
-    PID.ActualAngle= analogRead(angle_pin);
-    left_percentage=300000000;
-    right_percentage=300000000;
-    pwmWrite(left_hand_pin, left_percentage);
-    pwmWrite(right_hand_pin, right_percentage);
-    delay(1000);
-    PID_realize();
-    left_percentage=left_percentage+PID.voltage_change;
-    right_percentage=right_percentage-PID.voltage_change;
-    pwmWrite(left_hand_pin, left_percentage);
-    pwmWrite(right_hand_pin, right_percentage);
-
+  if(Serial.available()>0)
+  {
+    delay(100);
+    PID_Receive.Kp=Serial.parseFloat();
+    PID_Receive.Ki=Serial.parseFloat();
+    PID_Receive.Kd=Serial.parseFloat();
+   }
+   while(Serial.read() >= 0){}
+   Serial.print("Kp:");
+   Serial.print(PID_Receive.Kp);
+   Serial.print(" ");
+   Serial.print("Ki:");
+   Serial.print(PID_Receive.Ki);
+   Serial.print(" ");
+   Serial.print("Kd:");
+   Serial.println(PID_Receive.Kd);
+   PID.ActualAngle= analogRead(angle_pin);
+   left_percentage=300000000;
+   right_percentage=300000000;
+   pwmWrite(left_hand_pin, left_percentage);
+   pwmWrite(right_hand_pin, right_percentage);
+   delay(1000);
+   PID_realize();
+   left_percentage=left_percentage+PID.voltage_change;
+   right_percentage=right_percentage-PID.voltage_change;
+   pwmWrite(left_hand_pin, left_percentage);
+   pwmWrite(right_hand_pin, right_percentage);
 }
